@@ -2,7 +2,7 @@ pkg = import('pkgconfig')
 
 as_version = meson.project_version().split('.')
 
-soversion = 2
+soversion = 4
 library_minor = as_version[0].to_int() * 100 + as_version[1].to_int()
 library_micro = as_version[2].to_int()
 
@@ -28,7 +28,6 @@ version_header = configure_file(input: 'gexiv2-version.h.meson',
 gexiv2_enum_headers = ['gexiv2-metadata.h', 'gexiv2-log.h']
 
 gexiv2_headers = gexiv2_enum_headers + ['gexiv2.h',
-                  'gexiv2-managed-stream.h',
                   'gexiv2-preview-properties.h',
                   'gexiv2-preview-image.h',
                   'gexiv2-startup.h']
@@ -50,18 +49,16 @@ gexiv2 = library('gexiv2',
                   'gexiv2-metadata-gps.cpp',
                   'gexiv2-metadata-iptc.cpp',
                   'gexiv2-metadata-xmp.cpp',
-                  'gexiv2-stream-io.cpp',
                   'gexiv2-preview-properties.cpp',
                   'gexiv2-preview-image.cpp',
                   'gexiv2-log.cpp',
                   'gexiv2-startup.cpp',
                   'gexiv2-log-private.h',
                   'gexiv2-metadata-private.h',
-                  'gexiv2-stream-io.h',
                   'gexiv2-preview-properties-private.h',
                   'gexiv2-preview-image-private.h',
-                  'gexiv2-util-private.h'
-                  ] +
+                  'gexiv2-util-private.h',
+                  'gexiv2-gio-io.h'] +
                  gexiv2_headers +
                  [version_header, config_h] +
                  enum_sources,
