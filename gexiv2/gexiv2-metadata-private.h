@@ -32,11 +32,7 @@ G_BEGIN_DECLS
 
 struct _GExiv2MetadataPrivate
 {
-#if EXIV2_TEST_VERSION(0,27,99)
     Exiv2::Image::UniquePtr image;
-#else
-    Exiv2::Image::AutoPtr image;
-#endif
     gchar* comment;
     gchar* mime_type;
     gint pixel_width;
@@ -47,6 +43,9 @@ struct _GExiv2MetadataPrivate
     Exiv2::PreviewManager *preview_manager;
     GExiv2PreviewProperties **preview_properties;
 };
+using GExiv2MetadataPrivate = struct _GExiv2MetadataPrivate;
+
+G_GNUC_INTERNAL GExiv2MetadataPrivate* gexiv2_priv(GExiv2Metadata* self);
 
 /* private EXIF functions */
 

@@ -19,24 +19,29 @@
 
 #include <exiv2/exiv2.hpp>
 #include <glib-object.h>
+#include <iostream>
 #include <string>
 
 G_BEGIN_DECLS
 
 gboolean gexiv2_metadata_has_exif (GExiv2Metadata *self) {
     g_return_val_if_fail (GEXIV2_IS_METADATA (self), FALSE);
-    g_return_val_if_fail(self->priv != nullptr, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, FALSE);
+    auto* priv = gexiv2_priv(self);
 
-    return ! (self->priv->image->exifData().empty());
+    g_return_val_if_fail(priv != nullptr, FALSE);
+    g_return_val_if_fail(priv->image.get() != nullptr, FALSE);
+
+    return !(priv->image->exifData().empty());
 }
 
 gboolean gexiv2_metadata_has_exif_tag(GExiv2Metadata *self, const gchar* tag) {
     g_return_val_if_fail(GEXIV2_IS_METADATA(self), FALSE);
     g_return_val_if_fail(tag != nullptr, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, FALSE);
+    auto* priv = gexiv2_priv(self);
 
-    Exiv2::ExifData &exif_data = self->priv->image->exifData();
+    g_return_val_if_fail(priv->image.get() != nullptr, FALSE);
+
+    Exiv2::ExifData& exif_data = priv->image->exifData();
     for (Exiv2::ExifData::iterator it = exif_data.begin(); it != exif_data.end(); ++it) {
         if (it->count() > 0 && g_ascii_strcasecmp(tag, it->key().c_str()) == 0)
             return TRUE;
@@ -48,9 +53,11 @@ gboolean gexiv2_metadata_has_exif_tag(GExiv2Metadata *self, const gchar* tag) {
 gboolean gexiv2_metadata_clear_exif_tag(GExiv2Metadata *self, const gchar* tag) {
     g_return_val_if_fail(GEXIV2_IS_METADATA(self), FALSE);
     g_return_val_if_fail(tag != nullptr, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, FALSE);
+    auto* priv = gexiv2_priv(self);
 
-    Exiv2::ExifData &exif_data = self->priv->image->exifData();
+    g_return_val_if_fail(priv->image.get() != nullptr, FALSE);
+
+    Exiv2::ExifData& exif_data = priv->image->exifData();
 
     gboolean erased = FALSE;
 
@@ -69,17 +76,21 @@ gboolean gexiv2_metadata_clear_exif_tag(GExiv2Metadata *self, const gchar* tag) 
 
 void gexiv2_metadata_clear_exif (GExiv2Metadata *self) {
     g_return_if_fail (GEXIV2_IS_METADATA (self));
-    g_return_if_fail(self->priv->image.get() != nullptr);
+    auto* priv = gexiv2_priv(self);
 
-    self->priv->image->exifData().clear ();
+    g_return_if_fail(priv->image.get() != nullptr);
+
+    priv->image->exifData().clear();
 }
 
 gchar** gexiv2_metadata_get_exif_tags(GExiv2Metadata* self) {
     g_return_val_if_fail(GEXIV2_IS_METADATA(self), nullptr);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, nullptr);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv->image.get() != nullptr, nullptr);
 
     // get a copy of the ExifData and sort it by tags, preserving sort of original
-    Exiv2::ExifData exif_data = Exiv2::ExifData(self->priv->image->exifData());
+    Exiv2::ExifData exif_data = Exiv2::ExifData(priv->image->exifData());
     exif_data.sortByKey();
     // FIXME: Use detail::sortMetadata(exif_data);
     // Something is not right in ExifData that makes std::sort fail
@@ -109,12 +120,14 @@ gchar** gexiv2_metadata_get_exif_tags(GExiv2Metadata* self) {
 gchar* gexiv2_metadata_get_exif_tag_string (GExiv2Metadata *self, const gchar* tag, GError **error) {
     g_return_val_if_fail(GEXIV2_IS_METADATA(self), nullptr);
     g_return_val_if_fail(tag != nullptr, nullptr);
-    g_return_val_if_fail(self->priv != nullptr, nullptr);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, nullptr);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv != nullptr, nullptr);
+    g_return_val_if_fail(priv->image.get() != nullptr, nullptr);
     g_return_val_if_fail(error == nullptr || *error == nullptr, nullptr);
 
     try {
-        Exiv2::ExifData& exif_data = self->priv->image->exifData();
+        Exiv2::ExifData& exif_data = priv->image->exifData();
 
         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
         while (it != exif_data.end() && it->count() == 0)
@@ -133,15 +146,17 @@ gchar* gexiv2_metadata_get_exif_tag_string (GExiv2Metadata *self, const gchar* t
 
 gchar** gexiv2_metadata_get_exif_tag_multiple(GExiv2Metadata* self, const gchar* tag, GError** error) {
     g_return_val_if_fail(GEXIV2_IS_METADATA(self), nullptr);
-    g_return_val_if_fail(self->priv != nullptr, nullptr);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, nullptr);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv != nullptr, nullptr);
+    g_return_val_if_fail(priv->image.get() != nullptr, nullptr);
     g_return_val_if_fail(tag != nullptr, nullptr);
     g_return_val_if_fail(error == nullptr || *error == nullptr, FALSE);
 
     gchar** array = nullptr;
 
     try {
-        Exiv2::ExifData& exif_data = self->priv->image->exifData();
+        Exiv2::ExifData& exif_data = priv->image->exifData();
         auto it = exif_data.findKey(Exiv2::ExifKey(tag));
 
         while (it != exif_data.end() && it->count() == 0)
@@ -173,12 +188,14 @@ gboolean gexiv2_metadata_set_exif_tag_multiple(GExiv2Metadata* self,
     g_return_val_if_fail(GEXIV2_IS_METADATA(self), FALSE);
     g_return_val_if_fail(tag != nullptr, FALSE);
     g_return_val_if_fail(values != nullptr, FALSE);
-    g_return_val_if_fail(self->priv != nullptr, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, FALSE);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv != nullptr, FALSE);
+    g_return_val_if_fail(priv->image.get() != nullptr, FALSE);
     g_return_val_if_fail(error == nullptr || *error == nullptr, FALSE);
 
     try {
-        Exiv2::ExifData& exif_data = self->priv->image->exifData();
+        Exiv2::ExifData& exif_data = priv->image->exifData();
 
         auto it = exif_data.findKey(Exiv2::ExifKey(tag));
 
@@ -209,12 +226,14 @@ gboolean gexiv2_metadata_set_exif_tag_multiple(GExiv2Metadata* self,
 gchar* gexiv2_metadata_get_exif_tag_interpreted_string (GExiv2Metadata *self, const gchar* tag, GError **error) {
     g_return_val_if_fail(GEXIV2_IS_METADATA(self), nullptr);
     g_return_val_if_fail(tag != nullptr, nullptr);
-    g_return_val_if_fail(self->priv != nullptr, nullptr);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, nullptr);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv != nullptr, nullptr);
+    g_return_val_if_fail(priv->image.get() != nullptr, nullptr);
     g_return_val_if_fail(error == nullptr || *error == nullptr, nullptr);
 
     try {
-        Exiv2::ExifData& exif_data = self->priv->image->exifData();
+        Exiv2::ExifData& exif_data = priv->image->exifData();
 
         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
         while (it != exif_data.end() && it->count() == 0)
@@ -222,8 +241,14 @@ gchar* gexiv2_metadata_get_exif_tag_interpreted_string (GExiv2Metadata *self, co
         
         if (it != exif_data.end()) {
             std::ostringstream os;
-            it->write (os, &exif_data);
-            
+            auto value = it->getValue();
+            const auto* comment_value = dynamic_cast<const Exiv2::CommentValue*>(value.get());
+            if (comment_value == nullptr) {
+                it->write(os, &exif_data);
+            } else {
+                os << comment_value->comment();
+            }
+
             return g_strdup (os.str ().c_str ());
         }
     } catch (Exiv2::Error& e) {
@@ -239,12 +264,14 @@ gboolean gexiv2_metadata_set_exif_tag_string (GExiv2Metadata *self, const gchar*
     g_return_val_if_fail(GEXIV2_IS_METADATA (self), FALSE);
     g_return_val_if_fail(tag != NULL, FALSE);
     g_return_val_if_fail(value != NULL, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != NULL, FALSE);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv->image.get() != NULL, FALSE);
     g_return_val_if_fail(error == nullptr || *error == nullptr, FALSE);
     
     try {
-        self->priv->image->exifData()[tag] = value;
-        
+        priv->image->exifData()[tag] = value;
+
         return TRUE;
     } catch (Exiv2::Error& e) {
         error << e;
@@ -258,23 +285,20 @@ gboolean gexiv2_metadata_set_exif_tag_string (GExiv2Metadata *self, const gchar*
 glong gexiv2_metadata_get_exif_tag_long (GExiv2Metadata *self, const gchar* tag, GError **error) {
     g_return_val_if_fail(GEXIV2_IS_METADATA (self), 0);
     g_return_val_if_fail(tag != nullptr, 0);
-    g_return_val_if_fail(self->priv != nullptr, 0);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, 0);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv != nullptr, 0);
+    g_return_val_if_fail(priv->image.get() != nullptr, 0);
     g_return_val_if_fail(error == nullptr || *error == nullptr, 0);
 
     try {
-        Exiv2::ExifData& exif_data = self->priv->image->exifData();
+        Exiv2::ExifData& exif_data = priv->image->exifData();
 
         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
         while (it != exif_data.end() && it->count() == 0)
             it++;
-#ifdef EXIV2_EXIFDATUM_HAS_TO_LONG
-        if (it != exif_data.end())
-            return it->toLong ();
-#else
         if (it != exif_data.end())
             return static_cast<glong>(it->toInt64());
-#endif
     } catch (Exiv2::Error& e) {
         error << e;
     } catch (std::exception& e) {
@@ -287,12 +311,14 @@ glong gexiv2_metadata_get_exif_tag_long (GExiv2Metadata *self, const gchar* tag,
 gboolean gexiv2_metadata_set_exif_tag_long (GExiv2Metadata *self, const gchar* tag, glong value, GError **error) {
     g_return_val_if_fail(GEXIV2_IS_METADATA (self), FALSE);
     g_return_val_if_fail(tag != NULL, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != NULL, FALSE);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv->image.get() != NULL, FALSE);
     g_return_val_if_fail(error == nullptr || *error == nullptr, FALSE);
     
     try {
-        self->priv->image->exifData()[tag] = static_cast<int32_t>(value);
-        
+        priv->image->exifData()[tag] = static_cast<int32_t>(value);
+
         return TRUE;
     } catch (Exiv2::Error& e) {
         error << e;
@@ -303,18 +329,20 @@ gboolean gexiv2_metadata_set_exif_tag_long (GExiv2Metadata *self, const gchar* t
     return FALSE;
 }
 
-gboolean gexiv2_metadata_try_get_exif_tag_rational (GExiv2Metadata *self, const gchar* tag, gint* nom,
+gboolean gexiv2_metadata_get_exif_tag_rational (GExiv2Metadata *self, const gchar* tag, gint* nom,
     gint* den, GError **error) {
     g_return_val_if_fail(GEXIV2_IS_METADATA (self), FALSE);
     g_return_val_if_fail(tag != nullptr, FALSE);
     g_return_val_if_fail(nom != nullptr, FALSE);
     g_return_val_if_fail(den != nullptr, FALSE);
-    g_return_val_if_fail(self->priv != nullptr, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, FALSE);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv != nullptr, FALSE);
+    g_return_val_if_fail(priv->image.get() != nullptr, FALSE);
     g_return_val_if_fail(error == nullptr || *error == nullptr, FALSE);
     
     try {
-        Exiv2::ExifData& exif_data = self->priv->image->exifData();
+        Exiv2::ExifData& exif_data = priv->image->exifData();
 
         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
         while (it != exif_data.end() && it->count() == 0)
@@ -336,19 +364,21 @@ gboolean gexiv2_metadata_try_get_exif_tag_rational (GExiv2Metadata *self, const 
     return FALSE;
 }
 
-gboolean gexiv2_metadata_try_set_exif_tag_rational (GExiv2Metadata *self, const gchar* tag, gint nom,
+gboolean gexiv2_metadata_set_exif_tag_rational (GExiv2Metadata *self, const gchar* tag, gint nom,
     gint den, GError **error) {
     g_return_val_if_fail(GEXIV2_IS_METADATA (self), FALSE);
     g_return_val_if_fail(tag != NULL, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != NULL, FALSE);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv->image.get() != NULL, FALSE);
     g_return_val_if_fail(error == nullptr || *error == nullptr, FALSE);
     
     try {
         Exiv2::Rational r;
         r.first = nom;
         r.second = den;
-        self->priv->image->exifData()[tag] = r;
-        
+        priv->image->exifData()[tag] = r;
+
         return TRUE;
     } catch (Exiv2::Error& e) {
         error << e;
@@ -359,43 +389,14 @@ gboolean gexiv2_metadata_try_set_exif_tag_rational (GExiv2Metadata *self, const 
     return FALSE;
 }
 
-gboolean gexiv2_metadata_get_exif_tag_rational (GExiv2Metadata *self, const gchar* tag, gint* nom,
-    gint* den) {
-    GError   *error = nullptr;
-    gboolean  success;
-    g_return_val_if_fail(GEXIV2_IS_METADATA (self), FALSE);
-    g_return_val_if_fail(tag != NULL, FALSE);
-    g_return_val_if_fail(nom != NULL, FALSE);
-    g_return_val_if_fail(den != NULL, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != NULL, FALSE);
-
-    success = gexiv2_metadata_try_get_exif_tag_rational(self, tag, nom, den, &error);
-
-    if (error) {
-        g_warning("%s", error->message);
-        g_clear_error(&error);
-    }
-
-    return success;
+gboolean gexiv2_metadata_try_get_exif_tag_rational (GExiv2Metadata *self, const gchar* tag, gint* nom,
+    gint* den, GError **error) {
+    return gexiv2_metadata_get_exif_tag_rational(self, tag, nom, den, error);
 }
 
-gboolean gexiv2_metadata_set_exif_tag_rational (GExiv2Metadata *self, const gchar* tag, gint nom,
-    gint den) {
-    GError   *error = nullptr;
-    gboolean  success;
-
-    g_return_val_if_fail(GEXIV2_IS_METADATA (self), FALSE);
-    g_return_val_if_fail(tag != NULL, FALSE);
-    g_return_val_if_fail(self->priv->image.get() != NULL, FALSE);
-
-    success = gexiv2_metadata_try_set_exif_tag_rational(self, tag, nom, den, &error);
-
-    if (error) {
-        g_warning("%s", error->message);
-        g_clear_error(&error);
-    }
-
-    return success;
+gboolean gexiv2_metadata_try_set_exif_tag_rational (GExiv2Metadata *self, const gchar* tag, gint nom,
+    gint den, GError **error) {
+    return gexiv2_metadata_set_exif_tag_rational(self, tag, nom, den, error);
 }
 
 /**
@@ -403,7 +404,7 @@ gboolean gexiv2_metadata_set_exif_tag_rational (GExiv2Metadata *self, const gcha
  * @self: An instance of #GExiv2Metadata
  * @tag: Name of the tag to fetch
  * @def: Default value that is returned in error case
- * @error: (allow-none): A return location for a #GError or %NULL
+ * @error: (allow-none): A return location for a [struct@GLib.Error] or %NULL
  *
  * A convenience wrapper around gexiv2_metadata_get_exif_tag_rational() that
  * will convert the fraction into a floating point number.
@@ -420,7 +421,7 @@ gdouble gexiv2_metadata_get_exif_tag_rational_as_double(GExiv2Metadata* self,
     gint den = 0;
     gboolean result = FALSE;
 
-    result = gexiv2_metadata_try_get_exif_tag_rational(self, tag, &nom, &den, error);
+    result = gexiv2_metadata_get_exif_tag_rational(self, tag, &nom, &den, error);
     if (error && *error)
         return def;
 
@@ -501,19 +502,21 @@ gboolean gexiv2_metadata_exif_tag_supports_multiple_values (const gchar* tag, GE
 GBytes* gexiv2_metadata_get_exif_tag_raw (GExiv2Metadata *self, const gchar* tag, GError **error) {
     g_return_val_if_fail(GEXIV2_IS_METADATA(self), nullptr);
     g_return_val_if_fail(tag != nullptr, nullptr);
-    g_return_val_if_fail(self->priv != nullptr, nullptr);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, nullptr);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv != nullptr, nullptr);
+    g_return_val_if_fail(priv->image.get() != nullptr, nullptr);
     g_return_val_if_fail(error == nullptr || *error == nullptr, nullptr);
 
     try {
-        Exiv2::ExifData& exif_data = self->priv->image->exifData();
+        Exiv2::ExifData& exif_data = priv->image->exifData();
 
         Exiv2::ExifData::iterator it = exif_data.findKey(Exiv2::ExifKey(tag));
         while (it != exif_data.end() && it->count() == 0)
             it++;
 
         if (it != exif_data.end()) {
-            long size = it->size();
+            auto size = it->size();
             if( size > 0 ) {
                 gpointer data = g_malloc(size);
                 it->copy((Exiv2::byte*)data, Exiv2::invalidByteOrder);
@@ -533,12 +536,14 @@ GBytes * gexiv2_metadata_get_exif_data (GExiv2Metadata *self,
                                         GExiv2ByteOrder byte_order,
                                         GError **error) {
     g_return_val_if_fail(GEXIV2_IS_METADATA(self), nullptr);
-    g_return_val_if_fail(self->priv != nullptr, nullptr);
-    g_return_val_if_fail(self->priv->image.get() != nullptr, nullptr);
+    auto* priv = gexiv2_priv(self);
+
+    g_return_val_if_fail(priv != nullptr, nullptr);
+    g_return_val_if_fail(priv->image.get() != nullptr, nullptr);
     g_return_val_if_fail(error == nullptr || *error == nullptr, nullptr);
 
     try {
-        Exiv2::ExifData& exif_data = self->priv->image->exifData();
+        Exiv2::ExifData& exif_data = priv->image->exifData();
 
         if (exif_data.empty()) {
             return nullptr;

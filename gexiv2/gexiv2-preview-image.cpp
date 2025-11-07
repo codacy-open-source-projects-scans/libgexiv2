@@ -15,16 +15,23 @@
 
 G_BEGIN_DECLS
 
-G_DEFINE_TYPE_WITH_CODE (GExiv2PreviewImage, gexiv2_preview_image, G_TYPE_OBJECT, G_ADD_PRIVATE(GExiv2PreviewImage));
+using GExiv2PreviewImagePrivate = struct _GExiv2PreviewImagePrivate;
+struct _GExiv2PreviewImage {
+    GObject parent_instance;
+
+    GExiv2PreviewImagePrivate* priv;
+};
+
+G_DEFINE_TYPE_WITH_PRIVATE(GExiv2PreviewImage, gexiv2_preview_image, G_TYPE_OBJECT);
 
 static void gexiv2_preview_image_finalize (GObject *object);
 
 static void gexiv2_preview_image_init (GExiv2PreviewImage *self) {
     self->priv = (GExiv2PreviewImagePrivate *) gexiv2_preview_image_get_instance_private(self);
-    
-    self->priv->image = NULL;
-    self->priv->mime_type = NULL;
-    self->priv->extension = NULL;
+
+    self->priv->image = nullptr;
+    self->priv->mime_type = nullptr;
+    self->priv->extension = nullptr;
 }
 
 static void gexiv2_preview_image_class_init (GExiv2PreviewImageClass *klass) {
@@ -58,12 +65,10 @@ GExiv2PreviewImage* gexiv2_preview_image_new(Exiv2::PreviewManager* manager,
         return self;
     } catch (Exiv2::Error& e) {
         // Cleanup
-        if (self->priv->image)
-            delete self->priv->image;
-        if (self->priv->mime_type)
-            g_free(self->priv->mime_type);
-        if (self->priv->extension)
-            g_free(self->priv->extension);
+
+        delete self->priv->image;
+        g_free(self->priv->mime_type);
+        g_free(self->priv->extension);
 
         g_object_unref(self);
 
@@ -72,12 +77,6 @@ GExiv2PreviewImage* gexiv2_preview_image_new(Exiv2::PreviewManager* manager,
         error << e;
     }
     return nullptr;
-}
-
-void gexiv2_preview_image_free(GExiv2PreviewImage *self) {
-    g_return_if_fail(GEXIV2_IS_PREVIEW_IMAGE(self));
-    
-    g_object_unref(self);
 }
 
 const guint8* gexiv2_preview_image_get_data (GExiv2PreviewImage *self, guint32 *size) {
@@ -121,21 +120,11 @@ guint32 gexiv2_preview_image_get_height (GExiv2PreviewImage *self) {
     return self->priv->image->height();
 }
 
-glong gexiv2_preview_image_write_file (GExiv2PreviewImage *self, const gchar *path) {
-    GError* error = nullptr;
-    glong value = -1;
-
-    value = gexiv2_preview_image_try_write_file(self, path, &error);
-
-    if (error) {
-        g_warning("%s", error->message);
-        g_clear_error(&error);
-    }
-
-    return value;
+glong gexiv2_preview_image_try_write_file (GExiv2PreviewImage *self, const gchar *path, GError **error) {
+    return glong(gexiv2_preview_image_write_file(self, path, error));
 }
 
-glong gexiv2_preview_image_try_write_file(GExiv2PreviewImage* self, const gchar* path, GError** error) {
+size_t gexiv2_preview_image_write_file(GExiv2PreviewImage* self, const gchar* path, GError** error) {
     g_return_val_if_fail(GEXIV2_IS_PREVIEW_IMAGE(self), -1);
     g_return_val_if_fail(self->priv != nullptr, -1);
     g_return_val_if_fail(self->priv->image != nullptr, -1);
@@ -148,7 +137,7 @@ glong gexiv2_preview_image_try_write_file(GExiv2PreviewImage* self, const gchar*
     } catch (std::exception& e) {
         error << e;
     }
-    return -1;
+    return 0;
 }
 
 G_END_DECLS
